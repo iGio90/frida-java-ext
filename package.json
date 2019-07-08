@@ -1,0 +1,55 @@
+{
+  "name": "frida-java-ext",
+  "version": "1.0.0",
+  "description": "A frida java extension",
+  "homepage": "https://github.com/iGio90/frida-java-ext/blob/master/README.md",
+  "main": "./dist",
+  "types": "./dist/index.d.ts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iGio90/frida-java-ext"
+  },
+  "files": [
+    "/dist/"
+  ],
+  "browserify": {
+    "transform": [
+      [
+        "babelify",
+        {
+          "presets": [
+            [
+              "@babel/preset-env",
+              {
+                "loose": true
+              }
+            ]
+          ],
+          "plugins": [
+            [
+              "@babel/plugin-transform-runtime",
+              {
+                "corejs": 2
+              }
+            ]
+          ]
+        }
+      ]
+    ]
+  },
+  "scripts": {
+    "prepare": "npm run build",
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.4.5",
+    "@babel/plugin-transform-runtime": "^7.4.4",
+    "@babel/preset-env": "^7.4.5",
+    "@babel/runtime-corejs2": "^7.4.5",
+    "@types/frida-gum": "^13.1.0",
+    "@types/node": "^12.0.4",
+    "babelify": "^10.0.0"
+  }
+}
