@@ -1,6 +1,21 @@
 export module JavaExt {
 
     /**
+     * attach to all methods of the provided java class
+     *
+     * @param className
+     * @param callback
+     */
+    export function attachAllMethods(className: string, callback: Function) {
+        Java.performNow(function () {
+            const methods = enumerateMethods(className);
+            methods.forEach(method => {
+                hookInJvm(className, method, callback);
+            })
+        });
+    }
+
+    /**
      * attach to to the provided java class constructor (all overloads)
      *
      * @param className
@@ -16,6 +31,7 @@ export module JavaExt {
      * attach to to the provided java class method (all overloads)
      *
      * @param className
+     * @param method
      * @param callback
      */
     export function attachMethod(className: string, method: string, callback: Function) {
@@ -25,18 +41,11 @@ export module JavaExt {
     }
 
     /**
-     * attach to all methods of the provided java class
-     *
-     * @param className
-     * @param callback
+     * get the backtrace on the current context
      */
-    export function attachAllMethods(className: string, callback: Function) {
-        Java.performNow(function () {
-            const methods = enumerateJavaMethods(className);
-            methods.forEach(method => {
-                hookInJvm(className, method, callback);
-            })
-        });
+    export function backtrace() {
+        return Java.use("android.util.Log")
+            .getStackTraceString(Java.use("java.lang.Exception").$new());
     }
 
     /**
@@ -45,7 +54,7 @@ export module JavaExt {
      *
      * @param className
      */
-    export function enumerateJavaMethods(className: string): string[] {
+    export function enumerateMethods(className: string): string[] {
         const clazz = Java.use(className);
         const methods: string[] = clazz.class.getDeclaredMethods();
         clazz.$dispose();

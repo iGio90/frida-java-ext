@@ -22,6 +22,13 @@ npm run watch
 # inject the agent (quick att.py)
 ```
 
+### api
+- attachAllMethods
+- attachConstructor
+- attachMethod
+- backtrace
+- enumerateMethods
+
 ### example code
 ```typescript
 import { JavaExt } from 'frida-java-ext';
