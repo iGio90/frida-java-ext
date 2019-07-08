@@ -1,17 +1,35 @@
 export module JavaExt {
 
+    /**
+     * attach to to the provided java class constructor (all overloads)
+     *
+     * @param className
+     * @param callback
+     */
     export function attachConstructor(className: string, callback: Function) {
         Java.performNow(function () {
             hookInJvm(className, '$init', callback);
         });
     }
 
+    /**
+     * attach to to the provided java class method (all overloads)
+     *
+     * @param className
+     * @param callback
+     */
     export function attachMethod(className: string, method: string, callback: Function) {
         Java.performNow(function () {
             hookInJvm(className, method, callback);
         });
     }
 
+    /**
+     * attach to all methods of the provided java class
+     *
+     * @param className
+     * @param callback
+     */
     export function attachAllMethods(className: string, callback: Function) {
         Java.performNow(function () {
             const methods = enumerateJavaMethods(className);
@@ -20,9 +38,14 @@ export module JavaExt {
             })
         });
     }
-    
+
+    /**
+     * enumerate all the methods for the provided java class
+     * 0xdea code -> https://github.com/0xdea/frida-scripts/blob/master/raptor_frida_android_trace.js
+     *
+     * @param className
+     */
     export function enumerateJavaMethods(className: string): string[] {
-        // 0xdea code -> https://github.com/0xdea/frida-scripts/blob/master/raptor_frida_android_trace.js
         const clazz = Java.use(className);
         const methods: string[] = clazz.class.getDeclaredMethods();
         clazz.$dispose();
@@ -47,12 +70,18 @@ export module JavaExt {
             for (let i = 0; i < overloadCount; i++) {
                 const overload = handler[method].overloads[i];
                 overload.implementation = function () {
-                    this.detach = function () {
-                        overload.implementation = function () {
-                            return overload.apply(this, arguments);
-                        };
-                    };
-                    const ret = callback.call(this, arguments, method, className);
+                    const argsType: object[] = overload.argumentTypes;
+                    const args = [];
+
+                    for (let i=0;i<argsType.length;i++) {
+                        const arg = argsType[i];
+                        args.push({
+                            'className': arg['className'],
+                            'value': arguments[i]
+                        });
+                    }
+
+                    const ret = callback.call(this, args, method, className);
                     if (typeof ret !== 'undefined') {
                         return ret;
                     }
