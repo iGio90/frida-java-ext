@@ -23,6 +23,7 @@ npm run watch
 ```
 
 ### api
+- attachAll
 - attachAllMethods
 - attachConstructor
 - attachMethod
@@ -32,23 +33,34 @@ npm run watch
 
 ### example code
 ```typescript
-import { JavaExt } from 'frida-java-ext';
+import {JavaContext, JavaExt} from 'frida-java-ext';
 
-/*
- * the args object in callback is an array of crafted objects holding argument data type and value/handle
- */
+function simpleCallback(context: JavaContext) {
+    // print call arguments
+    console.log(context.className, context.method, JSON.stringify(context.arguments));
+
+    // print call arguments with types and details
+    console.log(context.className, context.method, JSON.stringify(context.formattedArguments));
+
+    // detach the hook
+    context.detach();
+}
 
 Java.performNow(() => {
-    JavaExt.attachAllMethods('android.app.Activity', (args: any[], method: string, className: string) => {
-        console.log(className, method, JSON.stringify(args));
+    JavaExt.attachAllMethods('android.app.Activity', simpleCallback);
+
+    JavaExt.attachConstructor('android.app.Activity', function (context: JavaContext) {
+        console.log(context.method, 'hit!')
     });
 
-    JavaExt.attachConstructor('android.app.Activity', (args: any[]) => {
-        console.log(JSON.stringify(args));
-    });
-
-    JavaExt.attachMethod('android.app.Activity', 'onCreate', (args: any[]) => {
-        console.log(JSON.stringify(args));
+    JavaExt.attachMethod('java.lang.Object', 'toString', {
+        onEnter(context: JavaContext): void {
+            console.log(context.className, context.method);
+        },
+        onLeave(retval: object): any {
+            console.log(JSON.stringify(retval));
+            return '';
+        }
     });
 });
 ```

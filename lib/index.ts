@@ -1,4 +1,25 @@
+export interface JavaContext {
+    arguments: IArguments,
+    className: string;
+    detach(): void;
+    formattedArguments: object[];
+    method: string;
+}
+
 export module JavaExt {
+    /**
+     * attach to constructor and all methods of the provided java class
+     *
+     * @param className
+     * @param callback
+     */
+    export function attachAll(className: string, callback: Function | JavaCallbacks) {
+        attachConstructor(className, callback);
+        const methods = enumerateMethods(className);
+        methods.forEach(method => {
+            hookInJvm(className, method, callback);
+        })
+    }
 
     /**
      * attach to all methods of the provided java class
@@ -6,7 +27,7 @@ export module JavaExt {
      * @param className
      * @param callback
      */
-    export function attachAllMethods(className: string, callback: Function) {
+    export function attachAllMethods(className: string, callback: Function | JavaCallbacks) {
         const methods = enumerateMethods(className);
         methods.forEach(method => {
             hookInJvm(className, method, callback);
@@ -19,7 +40,7 @@ export module JavaExt {
      * @param className
      * @param callback
      */
-    export function attachConstructor(className: string, callback: Function) {
+    export function attachConstructor(className: string, callback: Function | JavaCallbacks) {
         hookInJvm(className, '$init', callback);
     }
 
@@ -30,7 +51,7 @@ export module JavaExt {
      * @param method
      * @param callback
      */
-    export function attachMethod(className: string, method: string, callback: Function) {
+    export function attachMethod(className: string, method: string, callback: Function | JavaCallbacks) {
         Java.performNow(function () {
             hookInJvm(className, method, callback);
         });
@@ -70,7 +91,7 @@ export module JavaExt {
         return Java.use('android.app.ActivityThread').currentApplication().getApplicationContext();
     }
 
-    function hookInJvm(className: string, method: string, callback: Function) {
+    function hookInJvm(className: string, method: string, callback: Function | JavaCallbacks) {
         const handler = Java.use(className);
 
         const overloadCount = handler[method].overloads.length;
@@ -90,11 +111,47 @@ export module JavaExt {
                         });
                     }
 
-                    const ret = callback.call(this, args, method, className);
-                    if (typeof ret !== 'undefined') {
-                        return ret;
+                    if (typeof callback === 'function') {
+                        callback.call(this, {
+                            arguments: arguments,
+                            className: className,
+                            detach: () => {
+                                overload.implementation = function () {
+                                    return overload.apply(this, arguments);
+                                };
+                            },
+                            formattedArguments: args,
+                            method: method
+                        });
+                    } else {
+                        const cb = callback as JavaCallbacks;
+                        if (cb.onEnter) {
+                            cb.onEnter.call(this, {
+                                arguments: arguments,
+                                className: className,
+                                detach: () => {
+                                    overload.implementation = function () {
+                                        return overload.apply(this, arguments);
+                                    };
+                                },
+                                formattedArguments: args,
+                                method: method
+                            })
+                        }
                     }
-                    return overload.apply(this, arguments);
+
+                    let ret = overload.apply(this, arguments);
+                    if (typeof callback === 'object') {
+                        const cb = callback as JavaCallbacks;
+                        if (cb.onLeave) {
+                            const userRet = cb.onLeave.call(this, ret);
+                            if (typeof userRet !== 'undefined') {
+                                ret = userRet;
+                            }
+                        }
+                    }
+
+                    return ret;
                 }
             }
         }
@@ -107,4 +164,9 @@ export module JavaExt {
             return seen.hasOwnProperty(k) ? false : (seen[k] = true);
         });
     }
+}
+
+interface JavaCallbacks {
+    onEnter?(context: JavaContext): void;
+    onLeave?(retval: object): any;
 }
