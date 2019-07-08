@@ -7,12 +7,10 @@ export module JavaExt {
      * @param callback
      */
     export function attachAllMethods(className: string, callback: Function) {
-        Java.performNow(function () {
-            const methods = enumerateMethods(className);
-            methods.forEach(method => {
-                hookInJvm(className, method, callback);
-            })
-        });
+        const methods = enumerateMethods(className);
+        methods.forEach(method => {
+            hookInJvm(className, method, callback);
+        })
     }
 
     /**
@@ -22,9 +20,7 @@ export module JavaExt {
      * @param callback
      */
     export function attachConstructor(className: string, callback: Function) {
-        Java.performNow(function () {
-            hookInJvm(className, '$init', callback);
-        });
+        hookInJvm(className, '$init', callback);
     }
 
     /**
@@ -68,6 +64,10 @@ export module JavaExt {
             }
         });
         return uniqueBy(parsedMethods);
+    }
+
+    export function getCurrentContext() {
+        return Java.use('android.app.ActivityThread').currentApplication().getApplicationContext();
     }
 
     function hookInJvm(className: string, method: string, callback: Function) {

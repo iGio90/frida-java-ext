@@ -28,6 +28,7 @@ npm run watch
 - attachMethod
 - backtrace
 - enumerateMethods
+- getCurrentContext
 
 ### example code
 ```typescript
